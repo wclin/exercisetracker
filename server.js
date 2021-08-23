@@ -9,8 +9,16 @@ app.get('/', (req, res) => {
   res.sendFile(__dirname + '/views/index.html')
 });
 
+app.use(express.urlencoded({
+  extended: true
+}));
 
-
+// Exercise tracker endpoint
+var ctrl = require('./controller');
+let tracker = new ctrl.DefaultExerciseTracker();
+app.get('/api/users/:userID/logs', tracker.findExercises);
+app.post('/api/users', tracker.addUser);
+app.post('/api/users/:userID/exercises', tracker.addExercise);
 
 
 const listener = app.listen(process.env.PORT || 3000, () => {
