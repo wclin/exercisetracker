@@ -26,6 +26,14 @@ interface RespUser {
     username: string;
 }
 
+interface RespAddExercise {
+    _id: string;
+    username: string;
+    date: string;
+    duration: number;
+    description: string;
+}
+
 class DefaultExerciseTracker implements ExerciseTracker {
     addUser(req: Request, res: Response) {
         let newUserID: string = 'u' + Date.now().toString()
@@ -47,22 +55,44 @@ class DefaultExerciseTracker implements ExerciseTracker {
         if (cache.has(req.params.userID)) {
             let userLogs: UserObj = cache.get(req.params.userID)
             let userObj: UserObj = userLogs
-            let dummyLog: LogObj = {
-                date: req.body.date, // TODO: current date if not supplied
+            let reqDateStr: string = req.body.date
+            let dateStr: string = function (reqDateStr: string) {
+                if (reqDateStr === "") {
+                    let today: Date = new Date()
+                    let year: string = today.getFullYear().toString()
+                    let month: string = (today.getMonth() + 1).toString()
+                    let date: string = today.getDate().toString()
+                    return `${year}-${month}-${date}`
+                }
+                return reqDateStr;
+            }(reqDateStr);
+            let logObj: LogObj = {
+                date: dateStr,
                 desc: req.body.description,
                 duration: req.body.duration
             }
             if (userObj.logs != null) {
-                userObj.logs.push(dummyLog)
+                userObj.logs.push(logObj)
             } else {
-                userObj.logs = [dummyLog]
+                userObj.logs = [logObj]
             }
-            console.log(userObj)
             cache.set(req.params.userID, userObj)
-            res.status(200).send({ msg: 'found' })
+            let dateObj: Date = new Date()
+            if (reqDateStr !== "") {
+                let splitted: string[] = reqDateStr.split("-", 3)
+                dateObj.setFullYear(+splitted[0], +splitted[1]+1, +splitted[2])
+            }
+            let resp: RespAddExercise = {
+                _id: req.params.userID,
+                username: userObj.username,
+                date: dateObj.toDateString(),
+                duration: logObj.duration,
+                description: logObj.desc,
+            }
+            res.status(200).send(resp)
             return;
         }
-        res.status(200).send({ msg: 'yee' })
+        res.status(200).send({ error: 'not found' })
     }
     findExercises(req: Request, res: Response) {
         if (cache.has(req.params.userID)) {
