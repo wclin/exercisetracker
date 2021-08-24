@@ -17,6 +17,7 @@ app.use(express.urlencoded({
 var ctrl = require('./controller');
 let tracker = new ctrl.DefaultExerciseTracker();
 app.get('/api/users/:userID/logs', tracker.findExercises);
+app.get('/api/users', tracker.findUsers);
 app.post('/api/users', tracker.addUser);
 app.post('/api/users/:userID/exercises', tracker.addExercise);
 

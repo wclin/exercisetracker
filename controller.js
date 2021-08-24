@@ -10,7 +10,17 @@ var DefaultExerciseTracker = /** @class */ (function () {
         var newUserID = 'u' + Date.now().toString();
         var userObj = { username: req.body.username, logs: null };
         cache.set(newUserID, userObj);
-        res.status(200).send({ msg: 'yee', userID: newUserID });
+        var resp = { _id: newUserID, username: userObj.username };
+        res.status(200).send(resp);
+    };
+    DefaultExerciseTracker.prototype.findUsers = function (req, res) {
+        var userIDs = cache.keys();
+        var users = [];
+        userIDs.forEach(function (userID) {
+            var userObj = cache.get(userID);
+            users.push({ _id: userID, username: userObj.username });
+        });
+        res.status(200).send(users);
     };
     DefaultExerciseTracker.prototype.addExercise = function (req, res) {
         if (cache.has(req.params.userID)) {
@@ -36,9 +46,13 @@ var DefaultExerciseTracker = /** @class */ (function () {
     };
     DefaultExerciseTracker.prototype.findExercises = function (req, res) {
         if (cache.has(req.params.userID)) {
+            // TODO: date filter with from/to param
+            // TODO: limit param
             var userLogs = cache.get(req.params.userID);
             var userObj = userLogs;
-            res.status(200).send({ msg: 'found', logs: userObj.logs });
+            res.status(200).send({ msg: 'found', log: userObj.logs });
+            // TODO: format
+            // TODO: add count(len of log)
             return;
         }
         res.status(200).send({ error: 'Not Found' });
