@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import * as nodeCache from "node-cache"
+import { mainExercisTracker } from "./controller";
 
 export interface ExerciseTracker {
     addUser(req: Request, res: Response): void;
@@ -34,27 +35,54 @@ interface RespAddExercise {
     description: string;
 }
 
+interface RespExcercisListItem {
+    description: string;
+    duration: number;
+    date: string;
+}
+
+interface RespExcercisList {
+    _id: string;
+    username: string;
+    count: number;
+    log: RespExcercisListItem[];
+}
+
 class DefaultExerciseTracker implements ExerciseTracker {
+    private getDate(reqDateStr: string): Date {
+        let dateObj: Date = new Date()
+        if (reqDateStr) {
+            let splitted: string[] = reqDateStr.split("-", 3);
+            dateObj.setFullYear(+splitted[0], +splitted[1] - 1, +splitted[2]);
+        }
+        return dateObj
+    }
     addUser(req: Request, res: Response) {
+        console.log("[addu]")
+        console.log(req.body)
         let newUserID: string = 'u' + Date.now().toString()
-        let userObj: UserObj = { username: req.body.username, logs: null }
+        let userObj: UserObj = { username: req.body.username, logs: [] }
         cache.set(newUserID, userObj)
-        let resp: RespUser = {_id: newUserID, username: userObj.username}
+        let resp: RespUser = { _id: newUserID, username: userObj.username }
         res.status(200).send(resp)
     }
     findUsers(req: Request, res: Response) {
+        console.log("[findu]")
+        console.log(req.params)
         let userIDs: string[] = cache.keys()
         let users: RespUser[] = [];
         userIDs.forEach((userID: string) => {
             let userObj: UserObj = cache.get(userID)
-            users.push({_id: userID, username: userObj.username})
+            users.push({ _id: userID, username: userObj.username })
         })
         res.status(200).send(users)
     }
     addExercise(req: Request, res: Response) {
+        console.log("[addex]")
+        console.log(req.params)
+        console.log(req.body)
         if (cache.has(req.params.userID)) {
-            let userLogs: UserObj = cache.get(req.params.userID)
-            let userObj: UserObj = userLogs
+            let userObj: UserObj = cache.get(req.params.userID)
             let reqDateStr: string = req.body.date
             let dateStr: string = function (reqDateStr: string) {
                 if (reqDateStr === "") {
@@ -71,17 +99,9 @@ class DefaultExerciseTracker implements ExerciseTracker {
                 desc: req.body.description,
                 duration: req.body.duration
             }
-            if (userObj.logs != null) {
-                userObj.logs.push(logObj)
-            } else {
-                userObj.logs = [logObj]
-            }
+            userObj.logs.push(logObj)
             cache.set(req.params.userID, userObj)
-            let dateObj: Date = new Date()
-            if (reqDateStr !== "") {
-                let splitted: string[] = reqDateStr.split("-", 3)
-                dateObj.setFullYear(+splitted[0], +splitted[1]+1, +splitted[2])
-            }
+            let dateObj: Date = mainExercisTracker.prototype.getDate(reqDateStr);
             let resp: RespAddExercise = {
                 _id: req.params.userID,
                 username: userObj.username,
@@ -95,14 +115,38 @@ class DefaultExerciseTracker implements ExerciseTracker {
         res.status(200).send({ error: 'not found' })
     }
     findExercises(req: Request, res: Response) {
+        console.log("[findex]")
+        console.log(req.params)
+        console.log(req.query)
         if (cache.has(req.params.userID)) {
-            // TODO: date filter with from/to param
-            // TODO: limit param
+            let dateFrom: Date = mainExercisTracker.prototype.getDate(req.query.from || "2010-01-01")
+            let dateTo: Date = mainExercisTracker.prototype.getDate(req.query.to || "2888-12-31")
+            let limit: number = req.query.limit || 100000
+            let count: number = 0
             let userLogs: UserObj = cache.get(req.params.userID)
-            let userObj: UserObj = userLogs
-            res.status(200).send({ msg: 'found', log: userObj.logs })
-            // TODO: format
-            // TODO: add count(len of log)
+            let logs: RespExcercisListItem[] = []
+            for (let log of userLogs.logs) {
+                if (count >= limit) {
+                    break;
+                }
+                let dateObj: Date = mainExercisTracker.prototype.getDate(log.date)
+                if (dateObj < dateFrom || dateObj > dateTo) {
+                    continue;
+                }
+                count = count + 1;
+                logs.push({
+                    description: log.desc,
+                    duration: log.duration,
+                    date: mainExercisTracker.prototype.getDate(log.date).toDateString(),
+                })
+            }
+            let resp: RespExcercisList = {
+                _id: req.params.userID,
+                username: userLogs.username,
+                count: count,
+                log: logs,
+            }
+            res.status(200).send(resp)
             return;
         }
         res.status(200).send({ error: 'Not Found' })
