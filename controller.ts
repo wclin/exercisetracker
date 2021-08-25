@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import * as nodeCache from "node-cache"
+import nodeCache from "node-cache";
 import { mainExercisTracker } from "./controller";
 
 export interface ExerciseTracker {
@@ -9,7 +9,7 @@ export interface ExerciseTracker {
     findExercises(req: Request, res: Response): void;
 }
 
-const cache = new nodeCache({ stdTTL: 60 });
+const cache = new nodeCache({ stdTTL: 300 });
 
 interface LogObj {
     date: string;
@@ -72,7 +72,7 @@ class DefaultExerciseTracker implements ExerciseTracker {
         let userIDs: string[] = cache.keys()
         let users: RespUser[] = [];
         userIDs.forEach((userID: string) => {
-            let userObj: UserObj = cache.get(userID)
+            let userObj: UserObj = cache.get(userID) || { username: "", logs: [] };
             users.push({ _id: userID, username: userObj.username })
         })
         res.status(200).send(users)
@@ -82,7 +82,7 @@ class DefaultExerciseTracker implements ExerciseTracker {
         console.log(req.params)
         console.log(req.body)
         if (cache.has(req.params.userID)) {
-            let userObj: UserObj = cache.get(req.params.userID)
+            let userObj: UserObj = cache.get(req.params.userID) || { username: "", logs: [] };
             let reqDateStr: string = req.body.date
             let dateStr: string = function (reqDateStr: string) {
                 if (reqDateStr === "") {
@@ -119,11 +119,13 @@ class DefaultExerciseTracker implements ExerciseTracker {
         console.log(req.params)
         console.log(req.query)
         if (cache.has(req.params.userID)) {
-            let dateFrom: Date = mainExercisTracker.prototype.getDate(req.query.from || "2010-01-01")
-            let dateTo: Date = mainExercisTracker.prototype.getDate(req.query.to || "2888-12-31")
-            let limit: number = req.query.limit || 100000
+            let reqFrom: string = req.query.from as string || "1700-01-01"
+            let reqTo: string = req.query.to as string || "2888-12-31"
+            let dateFrom: Date = mainExercisTracker.prototype.getDate(reqFrom)
+            let dateTo: Date = mainExercisTracker.prototype.getDate(reqTo)
+            let limit: number = +(req.query.limit || 100000)
             let count: number = 0
-            let userLogs: UserObj = cache.get(req.params.userID)
+            let userLogs: UserObj = cache.get(req.params.userID) || { username: "", logs: [] };
             let logs: RespExcercisListItem[] = []
             for (let log of userLogs.logs) {
                 if (count >= limit) {

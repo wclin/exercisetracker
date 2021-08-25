@@ -1,9 +1,12 @@
 "use strict";
-exports.__esModule = true;
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
 exports.mainExercisTracker = exports.DefaultExerciseTracker = void 0;
-var nodeCache = require("node-cache");
+var node_cache_1 = __importDefault(require("node-cache"));
 var controller_1 = require("./controller");
-var cache = new nodeCache({ stdTTL: 60 });
+var cache = new node_cache_1.default({ stdTTL: 300 });
 var DefaultExerciseTracker = /** @class */ (function () {
     function DefaultExerciseTracker() {
     }
@@ -30,7 +33,7 @@ var DefaultExerciseTracker = /** @class */ (function () {
         var userIDs = cache.keys();
         var users = [];
         userIDs.forEach(function (userID) {
-            var userObj = cache.get(userID);
+            var userObj = cache.get(userID) || { username: "", logs: [] };
             users.push({ _id: userID, username: userObj.username });
         });
         res.status(200).send(users);
@@ -40,7 +43,7 @@ var DefaultExerciseTracker = /** @class */ (function () {
         console.log(req.params);
         console.log(req.body);
         if (cache.has(req.params.userID)) {
-            var userObj = cache.get(req.params.userID);
+            var userObj = cache.get(req.params.userID) || { username: "", logs: [] };
             var reqDateStr = req.body.date;
             var dateStr = function (reqDateStr) {
                 if (reqDateStr === "") {
@@ -65,7 +68,7 @@ var DefaultExerciseTracker = /** @class */ (function () {
                 username: userObj.username,
                 date: dateObj.toDateString(),
                 duration: logObj.duration,
-                description: logObj.desc
+                description: logObj.desc,
             };
             res.status(200).send(resp);
             return;
@@ -77,11 +80,13 @@ var DefaultExerciseTracker = /** @class */ (function () {
         console.log(req.params);
         console.log(req.query);
         if (cache.has(req.params.userID)) {
-            var dateFrom = controller_1.mainExercisTracker.prototype.getDate(req.query.from || "2010-01-01");
-            var dateTo = controller_1.mainExercisTracker.prototype.getDate(req.query.to || "2888-12-31");
-            var limit = req.query.limit || 100000;
+            var reqFrom = req.query.from || "1700-01-01";
+            var reqTo = req.query.to || "2888-12-31";
+            var dateFrom = controller_1.mainExercisTracker.prototype.getDate(reqFrom);
+            var dateTo = controller_1.mainExercisTracker.prototype.getDate(reqTo);
+            var limit = +(req.query.limit || 100000);
             var count = 0;
-            var userLogs = cache.get(req.params.userID);
+            var userLogs = cache.get(req.params.userID) || { username: "", logs: [] };
             var logs = [];
             for (var _i = 0, _a = userLogs.logs; _i < _a.length; _i++) {
                 var log = _a[_i];
@@ -96,14 +101,14 @@ var DefaultExerciseTracker = /** @class */ (function () {
                 logs.push({
                     description: log.desc,
                     duration: log.duration,
-                    date: controller_1.mainExercisTracker.prototype.getDate(log.date).toDateString()
+                    date: controller_1.mainExercisTracker.prototype.getDate(log.date).toDateString(),
                 });
             }
             var resp = {
                 _id: req.params.userID,
                 username: userLogs.username,
                 count: count,
-                log: logs
+                log: logs,
             };
             res.status(200).send(resp);
             return;
