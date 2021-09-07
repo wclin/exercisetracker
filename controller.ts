@@ -5,7 +5,7 @@ import { mainExercisTracker } from "./controller";
 export interface ExerciseTracker {
     addUser(req: Request, res: Response): void;
     findUsers(req: Request, res: Response): void;
-    addExercise(req: Request, res: Response): void;
+    addExerciseHandler(req: Request, res: Response): void;
     findExercises(req: Request, res: Response): void;
 }
 
@@ -77,42 +77,47 @@ class DefaultExerciseTracker implements ExerciseTracker {
         })
         res.status(200).send(users)
     }
-    addExercise(req: Request, res: Response) {
+    addExerciseHandler(req: Request, res: Response) {
         console.log("[addex]")
         console.log(req.params)
         console.log(req.body)
-        if (cache.has(req.params.userID)) {
-            let userObj: UserObj = cache.get(req.params.userID) || { username: "", logs: [] };
-            let reqDateStr: string = req.body.date
-            let dateStr: string = function (reqDateStr: string) {
-                if (reqDateStr === "") {
-                    let today: Date = new Date()
-                    let year: string = today.getFullYear().toString()
-                    let month: string = (today.getMonth() + 1).toString()
-                    let date: string = today.getDate().toString()
-                    return `${year}-${month}-${date}`
-                }
-                return reqDateStr;
-            }(reqDateStr);
-            let logObj: LogObj = {
-                date: dateStr,
-                desc: req.body.description,
-                duration: req.body.duration
-            }
-            userObj.logs.push(logObj)
-            cache.set(req.params.userID, userObj)
-            let dateObj: Date = mainExercisTracker.prototype.getDate(reqDateStr);
-            let resp: RespAddExercise = {
-                _id: req.params.userID,
-                username: userObj.username,
-                date: dateObj.toDateString(),
-                duration: logObj.duration,
-                description: logObj.desc,
-            }
-            res.status(200).send(resp)
-            return;
+        if (!cache.has(req.params.userID)) {
+            res.status(200).send({ error: 'not found' })
+            return
         }
-        res.status(200).send({ error: 'not found' })
+        let resp = this.addExercise(req);
+        res.status(200).send(resp)
+        return
+    }
+    addExercise(req: Request): Object {
+        let userObj: UserObj = cache.get(req.params.userID) || { username: "", logs: [] };
+        let reqDateStr: string = req.body.date
+        let dateStr: string = function (reqDateStr: string) {
+            if (reqDateStr === "") {
+                let today: Date = new Date()
+                let year: string = today.getFullYear().toString()
+                let month: string = (today.getMonth() + 1).toString()
+                let date: string = today.getDate().toString()
+                return `${year}-${month}-${date}`
+            }
+            return reqDateStr;
+        }(reqDateStr);
+        let logObj: LogObj = {
+            date: dateStr,
+            desc: req.body.description,
+            duration: parseInt(req.body.duration)
+        }
+        userObj.logs.push(logObj)
+        cache.set(req.params.userID, userObj)
+        let dateObj: Date = mainExercisTracker.prototype.getDate(reqDateStr);
+        let resp: RespAddExercise = {
+            _id: req.params.userID,
+            username: userObj.username,
+            date: dateObj.toDateString(),
+            duration: logObj.duration,
+            description: logObj.desc,
+        }
+        return resp;
     }
     findExercises(req: Request, res: Response) {
         console.log("[findex]")

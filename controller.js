@@ -38,42 +38,47 @@ var DefaultExerciseTracker = /** @class */ (function () {
         });
         res.status(200).send(users);
     };
-    DefaultExerciseTracker.prototype.addExercise = function (req, res) {
+    DefaultExerciseTracker.prototype.addExerciseHandler = function (req, res) {
         console.log("[addex]");
         console.log(req.params);
         console.log(req.body);
-        if (cache.has(req.params.userID)) {
-            var userObj = cache.get(req.params.userID) || { username: "", logs: [] };
-            var reqDateStr = req.body.date;
-            var dateStr = function (reqDateStr) {
-                if (reqDateStr === "") {
-                    var today = new Date();
-                    var year = today.getFullYear().toString();
-                    var month = (today.getMonth() + 1).toString();
-                    var date = today.getDate().toString();
-                    return year + "-" + month + "-" + date;
-                }
-                return reqDateStr;
-            }(reqDateStr);
-            var logObj = {
-                date: dateStr,
-                desc: req.body.description,
-                duration: req.body.duration
-            };
-            userObj.logs.push(logObj);
-            cache.set(req.params.userID, userObj);
-            var dateObj = controller_1.mainExercisTracker.prototype.getDate(reqDateStr);
-            var resp = {
-                _id: req.params.userID,
-                username: userObj.username,
-                date: dateObj.toDateString(),
-                duration: logObj.duration,
-                description: logObj.desc,
-            };
-            res.status(200).send(resp);
+        if (!cache.has(req.params.userID)) {
+            res.status(200).send({ error: 'not found' });
             return;
         }
-        res.status(200).send({ error: 'not found' });
+        var resp = this.addExercise(req);
+        res.status(200).send(resp);
+        return;
+    };
+    DefaultExerciseTracker.prototype.addExercise = function (req) {
+        var userObj = cache.get(req.params.userID) || { username: "", logs: [] };
+        var reqDateStr = req.body.date;
+        var dateStr = function (reqDateStr) {
+            if (reqDateStr === "") {
+                var today = new Date();
+                var year = today.getFullYear().toString();
+                var month = (today.getMonth() + 1).toString();
+                var date = today.getDate().toString();
+                return year + "-" + month + "-" + date;
+            }
+            return reqDateStr;
+        }(reqDateStr);
+        var logObj = {
+            date: dateStr,
+            desc: req.body.description,
+            duration: parseInt(req.body.duration)
+        };
+        userObj.logs.push(logObj);
+        cache.set(req.params.userID, userObj);
+        var dateObj = controller_1.mainExercisTracker.prototype.getDate(reqDateStr);
+        var resp = {
+            _id: req.params.userID,
+            username: userObj.username,
+            date: dateObj.toDateString(),
+            duration: logObj.duration,
+            description: logObj.desc,
+        };
+        return resp;
     };
     DefaultExerciseTracker.prototype.findExercises = function (req, res) {
         console.log("[findex]");
