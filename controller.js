@@ -46,7 +46,7 @@ var DefaultExerciseTracker = /** @class */ (function () {
             res.status(200).send({ error: 'not found' });
             return;
         }
-        var resp = this.addExercise(req);
+        var resp = controller_1.mainExercisTracker.prototype.addExercise(req);
         res.status(200).send(resp);
         return;
     };

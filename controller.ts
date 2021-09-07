@@ -85,7 +85,7 @@ class DefaultExerciseTracker implements ExerciseTracker {
             res.status(200).send({ error: 'not found' })
             return
         }
-        let resp = this.addExercise(req);
+        let resp = mainExercisTracker.prototype.addExercise(req);
         res.status(200).send(resp)
         return
     }
